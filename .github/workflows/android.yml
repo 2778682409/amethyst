@@ -20,22 +20,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: false  # 先不自动检出子模块，先修复 .gitmodules
+          submodules: false
 
       - name: Fix broken submodule entries in .gitmodules
         run: |
-          # 移除 .gitmodules 中没有 URL 的子模块条目（如 g14es），防止 git submodule update 失败
+          # 移除 .gitmodules 中所有没有 url 的子模块条目（如 gl4es），防止 submodule update 失败
           if [ -f .gitmodules ]; then
-            git config --remove-section submodule.g14es 2>/dev/null || true
-            if grep -q 'submodule "g14es"' .gitmodules 2>/dev/null; then
-              awk '
-                /^\[submodule "g14es"\]/ { skip=1; next }
-                /^\[submodule/ { skip=0 }
-                !skip { print }
-              ' .gitmodules > .gitmodules.tmp && mv .gitmodules.tmp .gitmodules
-            fi
-          fi
-          git submodule update --init --recursive
+            python3 - << 'PYEOF'
+import configparser, pathlib
+p = pathlib.Path('.gitmodules')
+if not p.exists():
+    raise SystemExit(0)
+cp = configparser.ConfigParser()
+cp.read(p)
+to_remove = []
+for section in cp.sections():
+    if section.startswith('submodule "') and not cp.has_option(section, 'url'):
+        to_remove.append(section)
+for section in to_remove:
+    cp.remove_section(section)
+with open(p, 'w') as f:
+    cp.write(f)
+print("Removed submodule sections without URL:", to_remove)
+PYEOF
+          git submodule update --init --recursive || true
+        shell: bash
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4

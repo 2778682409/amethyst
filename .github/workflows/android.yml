@@ -1,11 +1,9 @@
-yaml
-
-
 name: Android CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -18,12 +16,16 @@ jobs:
           submodules: false
 
       - name: Fix broken submodule entries in .gitmodules
-        run: python3 -c "import configparser, pathlib; p = pathlib.Path('.gitmodules'); cp = configparser.ConfigParser(); cp.read(p) if p.exists() else None; [cp.remove_section(s) for s in list(cp.sections()) if s.startswith('submodule ') and not cp.has_option(s, 'url')]; open(p, 'w').write('') if not cp.sections() else cp.write(open(p, 'w'))" && git submodule update --init --recursive || true
+        run: |
+          if [ -f .gitmodules ]; then
+            python3 -c "import configparser, pathlib; p = pathlib.Path('.gitmodules'); cp = configparser.ConfigParser(); cp.read(p); [cp.remove_section(s) for s in list(cp.sections()) if s.startswith('submodule ') and not cp.has_option(s, 'url')]; cp.write(open(p, 'w'))"
+          fi
+          git submodule update --init --recursive || true
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
 
       - name: Setup Gradle

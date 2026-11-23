@@ -19,8 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
+        # 关闭子模块递归检出，避免 .gitmodules 中缺少 URL 的子模块（如 g14es）导致构建失败
+        # submodules: "recursive"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
